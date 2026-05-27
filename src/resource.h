@@ -1,0 +1,42 @@
+#ifndef RESOURCE_H
+#define RESOURCE_H
+
+#define IDI_APPICON       101
+#define IDR_MAINMENU      102
+
+#define IDM_FILE_NEWSSH    1001
+#define IDM_FILE_NEWSERIAL 1002
+#define IDM_FILE_DISCONNECT 1003
+#define IDM_FILE_EXIT      1004
+
+#define IDM_SESSION_SAVE   2001
+#define IDM_SESSION_MANAGE 2002
+
+#define IDM_EDIT_COPY      3001
+#define IDM_EDIT_PASTE     3002
+#define IDM_EDIT_SELECTALL 3003
+#define IDM_EDIT_FIND      3004
+#define IDM_EDIT_CLEAR     3005
+
+#define IDM_VIEW_FONT      4001
+#define IDM_VIEW_FULLSCREEN 4002
+
+#define IDM_HELP_ABOUT     5001
+
+#define IDD_SSH_CONNECT    201
+#define IDC_SSH_HOST       301
+#define IDC_SSH_PORT       302
+#define IDC_SSH_USER       303
+#define IDC_SSH_PASS       304
+
+#define IDD_SERIAL_CONNECT 202
+#define IDC_SERIAL_PORT    305
+#define IDC_SERIAL_BAUD    306
+#define IDC_SERIAL_DATA    307
+#define IDC_SERIAL_PARITY  308
+#define IDC_SERIAL_STOP    309
+
+#define IDD_SESSION_MANAGER 203
+#define IDC_SESSION_LIST   310
+
+#endif

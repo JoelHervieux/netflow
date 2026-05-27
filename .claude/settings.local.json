@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Remove-Item -Recurse -Force C:\\\\netflow\\\\node_modules\\\\electron -Confirm:$false; $env:ELECTRON_GET_USE_PROXY = \"\"; $env:ELECTRON_SKIP_BINARY_DOWNLOAD = \"\"; Set-Location C:\\\\netflow; npm install electron --verbose 2>&1)",
+      "PowerShell(cmd /c \"cd /d C:\\\\netflow && package.bat\" 2>&1)",
+      "Bash(npx webpack *)"
+    ]
+  }
+}
