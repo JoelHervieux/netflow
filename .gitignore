@@ -1,5 +1,12 @@
-build/
+# Node / Vite
+node_modules/
+dist/
+*.log
+
+# Rust / Tauri
+src-tauri/target/
+src-tauri/gen/
+
+# Local
+.DS_Store
 *.exe
-*.obj
-*.o
-*.d
