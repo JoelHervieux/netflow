@@ -10,7 +10,6 @@ import {
   writeText as clipWriteText,
 } from "@tauri-apps/plugin-clipboard-manager";
 import { openSshModal, openSerialModal } from "./modal";
-import { makeColorizer } from "./colorize";
 
 type SessionType = "ssh" | "serial";
 
@@ -22,7 +21,6 @@ interface Session {
   fit: FitAddon;
   panel: HTMLDivElement;
   connected: boolean;
-  colorize: (text: string) => string;
 }
 
 const TERM_THEME = {
@@ -102,7 +100,6 @@ function createSession(id: string, type: SessionType, title: string): Session {
     fit,
     panel,
     connected: true,
-    colorize: makeColorizer(),
   };
   sessions.set(id, session);
   order.push(id);
@@ -120,7 +117,7 @@ function makeDataChannel(getId: () => string | null): Channel<string> {
     if (!id) return;
     const s = sessions.get(id);
     if (!s) return;
-    s.term.write(s.colorize(text));
+    s.term.write(text);
   };
   return ch;
 }
