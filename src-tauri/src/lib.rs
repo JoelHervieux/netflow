@@ -4,9 +4,9 @@ mod ssh;
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use base64::Engine;
 use serial::SerialHandle;
 use ssh::SshCmd;
+use tauri::ipc::{Channel, InvokeResponseBody};
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -20,25 +20,8 @@ enum Conn {
 struct Registry(Mutex<HashMap<String, Conn>>);
 
 #[derive(Clone, serde::Serialize)]
-struct TermData {
-    id: String,
-    data: String,
-}
-
-#[derive(Clone, serde::Serialize)]
 struct TermClosed {
     id: String,
-}
-
-fn emit_data(app: &AppHandle, id: &str, bytes: Vec<u8>) {
-    let data = base64::engine::general_purpose::STANDARD.encode(&bytes);
-    let _ = app.emit(
-        "term-data",
-        TermData {
-            id: id.to_string(),
-            data,
-        },
-    );
 }
 
 fn emit_closed(app: &AppHandle, id: &str) {
@@ -53,12 +36,12 @@ async fn ssh_connect(
     port: u16,
     username: String,
     password: String,
+    on_data: Channel<InvokeResponseBody>,
 ) -> Result<String, String> {
     let id = uuid::Uuid::new_v4().to_string();
-    let app_data = app.clone();
     let app_close = app.clone();
-    let id_data = id.clone();
     let id_close = id.clone();
+    let on_data_cb = on_data.clone();
 
     let tx = ssh::connect(
         host,
@@ -67,7 +50,9 @@ async fn ssh_connect(
         password,
         80,
         24,
-        move |bytes| emit_data(&app_data, &id_data, bytes),
+        move |bytes| {
+            let _ = on_data_cb.send(InvokeResponseBody::Raw(bytes));
+        },
         move || emit_closed(&app_close, &id_close),
     )
     .await?;
@@ -85,12 +70,12 @@ fn serial_connect(
     data_bits: u32,
     parity: u32,
     stop_bits: u32,
+    on_data: Channel<InvokeResponseBody>,
 ) -> Result<String, String> {
     let id = uuid::Uuid::new_v4().to_string();
-    let app_data = app.clone();
     let app_close = app.clone();
-    let id_data = id.clone();
     let id_close = id.clone();
+    let on_data_cb = on_data.clone();
 
     let handle = serial::connect(
         &port,
@@ -98,7 +83,9 @@ fn serial_connect(
         data_bits,
         parity,
         stop_bits,
-        move |bytes| emit_data(&app_data, &id_data, bytes),
+        move |bytes| {
+            let _ = on_data_cb.send(InvokeResponseBody::Raw(bytes));
+        },
         move || emit_closed(&app_close, &id_close),
     )?;
 

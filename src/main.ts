@@ -2,7 +2,7 @@ import "./style.css";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, Channel } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
@@ -10,6 +10,7 @@ import {
   writeText as clipWriteText,
 } from "@tauri-apps/plugin-clipboard-manager";
 import { openSshModal, openSerialModal } from "./modal";
+import { makeColorizer } from "./colorize";
 
 type SessionType = "ssh" | "serial";
 
@@ -21,6 +22,7 @@ interface Session {
   fit: FitAddon;
   panel: HTMLDivElement;
   connected: boolean;
+  colorize: (bytes: Uint8Array) => string;
 }
 
 const TERM_THEME = {
@@ -61,16 +63,6 @@ const statusHint = document.getElementById("status-hint") as HTMLElement;
 const statusSize = document.getElementById("status-size") as HTMLElement;
 
 // ---------------------------------------------------------------------------
-// base64 -> bytes (for raw terminal data coming from the backend)
-// ---------------------------------------------------------------------------
-function b64ToBytes(b64: string): Uint8Array {
-  const bin = atob(b64);
-  const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-  return out;
-}
-
-// ---------------------------------------------------------------------------
 // Session lifecycle
 // ---------------------------------------------------------------------------
 function createSession(id: string, type: SessionType, title: string): Session {
@@ -102,10 +94,36 @@ function createSession(id: string, type: SessionType, title: string): Session {
     if (id === activeId) updateStatus();
   });
 
-  const session: Session = { id, type, title, term, fit, panel, connected: true };
+  const session: Session = {
+    id,
+    type,
+    title,
+    term,
+    fit,
+    panel,
+    connected: true,
+    colorize: makeColorizer(),
+  };
   sessions.set(id, session);
   order.push(id);
   return session;
+}
+
+// Channel-based output: backend sends raw bytes via tauri::ipc::Channel — no
+// base64, no global event emit. The colorizer wraps switch CLI keywords with
+// ANSI escapes on complete lines only (partial lines flow through plain so
+// interactive echo stays snappy).
+function makeDataChannel(getId: () => string | null): Channel<ArrayBuffer> {
+  const ch = new Channel<ArrayBuffer>();
+  ch.onmessage = (buf) => {
+    const id = getId();
+    if (!id) return;
+    const s = sessions.get(id);
+    if (!s) return;
+    const bytes = new Uint8Array(buf);
+    s.term.write(s.colorize(bytes));
+  };
+  return ch;
 }
 
 function setActive(id: string | null) {
@@ -207,12 +225,16 @@ function escapeHtml(s: string): string {
 // ---------------------------------------------------------------------------
 function newSsh() {
   openSshModal(async (p) => {
+    let assignedId: string | null = null;
+    const onData = makeDataChannel(() => assignedId);
     const id = await invoke<string>("ssh_connect", {
       host: p.host,
       port: p.port,
       username: p.username,
       password: p.password,
+      onData,
     });
+    assignedId = id;
     const title = `${p.username}@${p.host}`;
     const s = createSession(id, "ssh", title);
     setActive(s.id);
@@ -221,13 +243,17 @@ function newSsh() {
 
 function newSerial() {
   openSerialModal(async (p) => {
+    let assignedId: string | null = null;
+    const onData = makeDataChannel(() => assignedId);
     const id = await invoke<string>("serial_connect", {
       port: p.port,
       baudRate: p.baudRate,
       dataBits: p.dataBits,
       parity: p.parity,
       stopBits: p.stopBits,
+      onData,
     });
+    assignedId = id;
     const title = `${p.port} — ${p.baudRate}`;
     const s = createSession(id, "serial", title);
     setActive(s.id);
@@ -235,13 +261,8 @@ function newSerial() {
 }
 
 // ---------------------------------------------------------------------------
-// Backend events
+// Backend events (only the rare close notice — term-data flows over a Channel)
 // ---------------------------------------------------------------------------
-listen<{ id: string; data: string }>("term-data", (e) => {
-  const s = sessions.get(e.payload.id);
-  if (s) s.term.write(b64ToBytes(e.payload.data));
-});
-
 listen<{ id: string }>("term-closed", (e) => {
   const s = sessions.get(e.payload.id);
   if (!s) return;

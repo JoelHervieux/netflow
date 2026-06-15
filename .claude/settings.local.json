@@ -5,5 +5,20 @@
       "PowerShell(cmd /c \"cd /d C:\\\\netflow && package.bat\" 2>&1)",
       "Bash(npx webpack *)"
     ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "powershell",
+            "command": "if ((git status --porcelain)) { git add -A; git commit -m \"auto: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')\"; if ($?) { git push origin main } }",
+            "timeout": 60,
+            "statusMessage": "Pushing to GitHub..."
+          }
+        ]
+      }
+    ]
   }
 }
