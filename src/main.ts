@@ -2,6 +2,7 @@ import "./style.css";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { WebglAddon } from "@xterm/addon-webgl";
 import { invoke, Channel } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -82,6 +83,14 @@ function createSession(id: string, type: SessionType, title: string): Session {
   panel.className = "term-panel";
   workspace.appendChild(panel);
   term.open(panel);
+
+  try {
+    const webgl = new WebglAddon();
+    webgl.onContextLoss(() => webgl.dispose());
+    term.loadAddon(webgl);
+  } catch {
+    // GPU unavailable — fall back to DOM renderer silently.
+  }
 
   term.onData((data) => {
     invoke("write_data", { id, data }).catch(() => {});
