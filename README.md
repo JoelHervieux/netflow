@@ -13,6 +13,10 @@
 [![SSH](https://img.shields.io/badge/SSH-libssh2-fbbf6b?style=flat-square)](#)
 [![License](https://img.shields.io/badge/license-MIT-a4adba?style=flat-square)](LICENSE)
 
+<br>
+
+[![Télécharger NetFlow](https://img.shields.io/badge/⬇%20T%C3%A9l%C3%A9charger-NetFlow--Setup.exe-7c8cff?style=for-the-badge&labelColor=0d0f14)](https://github.com/JoelHervieux/netflow/releases/latest/download/NetFlow-Setup.exe)
+
 </div>
 
 ---

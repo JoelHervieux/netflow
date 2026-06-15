@@ -1,0 +1,48 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      - name: Build Tauri bundle
+        run: npm run tauri build
+
+      - name: Rename installer to stable name
+        shell: pwsh
+        run: |
+          $src = Get-ChildItem src-tauri/target/release/bundle/nsis/*.exe | Select-Object -First 1
+          Copy-Item $src.FullName -Destination src-tauri/target/release/bundle/nsis/NetFlow-Setup.exe -Force
+
+      - name: Publish rolling "latest" release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: NetFlow (latest)
+          body: |
+            Build automatique depuis `main` au commit ${{ github.sha }}.
+            Téléchargez **NetFlow-Setup.exe** ci-dessous.
+          files: src-tauri/target/release/bundle/nsis/NetFlow-Setup.exe
+          make_latest: "true"
