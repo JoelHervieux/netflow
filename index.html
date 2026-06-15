@@ -7,11 +7,17 @@
   </head>
   <body>
     <div id="app">
-      <!-- Titlebar (custom, draggable) -->
       <header class="titlebar" data-tauri-drag-region>
         <div class="logo">N</div>
         <div class="app-name">NetFlow</div>
         <div class="session-info" id="session-info"></div>
+        <div class="title-actions" id="title-actions">
+          <button class="title-action" id="btn-capture" title="Démarrer la capture (Ctrl+E)">
+            <span class="cap-dot"></span><span id="cap-label">Capture</span>
+          </button>
+          <button class="title-action" id="btn-clear" title="Effacer l'écran (Ctrl+L)">Effacer</button>
+        </div>
+        <button class="title-action title-action-icon" id="btn-settings" title="Paramètres (Ctrl+,)">&#xE713;</button>
         <div class="caption-btns">
           <button class="caption-btn" id="btn-min" title="Réduire">&#xE921;</button>
           <button class="caption-btn" id="btn-max" title="Agrandir">&#xE922;</button>
@@ -19,46 +25,32 @@
         </div>
       </header>
 
-      <!-- Tab bar -->
       <nav class="tabs" id="tabs"></nav>
 
-      <!-- Workspace: one terminal panel per tab, plus empty state -->
       <main class="workspace" id="workspace">
         <section class="empty" id="empty">
           <div class="empty-mark">&gt;_</div>
-          <div class="empty-title">NetFlow Terminal</div>
-          <div class="empty-sub">Choisissez un type de connexion pour commencer</div>
-          <div class="empty-btns">
-            <button class="bigbtn bigbtn-ssh" id="empty-ssh">
-              <span class="bigbtn-badge">SSH</span>
-              <span class="bigbtn-body">
-                <span class="bigbtn-title">Nouvelle connexion SSH</span>
-                <span class="bigbtn-sub">Switch, routeur, serveur — port 22</span>
-              </span>
-              <span class="bigbtn-shortcut">Ctrl+N</span>
-            </button>
-            <button class="bigbtn bigbtn-com" id="empty-serial">
-              <span class="bigbtn-badge bigbtn-badge-com">COM</span>
-              <span class="bigbtn-body">
-                <span class="bigbtn-title">Connexion série</span>
-                <span class="bigbtn-sub">Console RJ45, USB-COM, port DB9</span>
-              </span>
-              <span class="bigbtn-shortcut">Ctrl+Shift+N</span>
-            </button>
+          <div class="empty-title">NetFlow</div>
+          <div class="empty-sub">Client terminal SSH &amp; série pour équipements réseau</div>
+          <button class="bigbtn-primary" id="empty-new">
+            <span class="bigbtn-plus">+</span>
+            <span>Nouvelle connexion</span>
+          </button>
+          <div class="empty-shortcuts">
+            <span><kbd>Ctrl</kbd>+<kbd>N</kbd> Nouvelle connexion</span>
+            <span><kbd>Ctrl</kbd>+<kbd>,</kbd> Paramètres</span>
           </div>
         </section>
       </main>
 
-      <!-- Status bar -->
       <footer class="statusbar" id="statusbar">
         <span class="status-dot" id="status-dot"></span>
         <span class="status-text" id="status-text">Aucune session active</span>
-        <span class="status-hint" id="status-hint">Ctrl+N SSH&nbsp;&nbsp; Ctrl+Shift+N Serial</span>
+        <span class="status-hint" id="status-hint"></span>
         <span class="status-size" id="status-size"></span>
       </footer>
     </div>
 
-    <!-- Modal host -->
     <div class="scrim" id="scrim"></div>
 
     <script type="module" src="/src/main.ts"></script>

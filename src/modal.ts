@@ -13,9 +13,11 @@ export interface SerialParams {
   port: string;
   baudRate: number;
   dataBits: number;
-  parity: number; // 0 none, 1 odd, 2 even
+  parity: number;
   stopBits: number;
 }
+
+export type ConnectionKind = "ssh" | "serial";
 
 function closeModal() {
   scrim.classList.remove("open");
@@ -26,14 +28,12 @@ function mount(html: string): HTMLDivElement {
   scrim.innerHTML = html;
   scrim.classList.add("open");
   const modal = scrim.querySelector(".modal") as HTMLDivElement;
-  // Close on scrim click (but not modal click) or Escape.
   scrim.onclick = (e) => {
     if (e.target === scrim) closeModal();
   };
   return modal;
 }
 
-// Esc key closes whatever modal is open.
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && scrim.classList.contains("open")) {
     e.preventDefault();
@@ -41,14 +41,58 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Type chooser — first stop when user clicks "+"
+// ---------------------------------------------------------------------------
+export function openTypeChooser(onPick: (kind: ConnectionKind) => void) {
+  const modal = mount(`
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">Nouvelle connexion</div>
+          <div class="modal-sub">Choisissez le type de connexion à l'équipement</div>
+        </div>
+      </div>
+      <div class="modal-sep"></div>
+      <div class="type-grid">
+        <button class="type-card ssh" data-kind="ssh">
+          <span class="type-card-badge">SSH</span>
+          <span class="type-card-title">SSH</span>
+          <span class="type-card-sub">Switch, routeur, serveur — port 22 par défaut</span>
+        </button>
+        <button class="type-card com" data-kind="serial">
+          <span class="type-card-badge">COM</span>
+          <span class="type-card-title">Série</span>
+          <span class="type-card-sub">Console RJ45, USB-COM, DB9</span>
+        </button>
+      </div>
+      <div class="modal-btns">
+        <button class="btn btn-secondary" id="m-cancel">Annuler</button>
+      </div>
+    </div>
+  `);
+
+  modal.querySelectorAll<HTMLButtonElement>(".type-card").forEach((card) => {
+    card.onclick = () => {
+      const kind = card.dataset.kind as ConnectionKind;
+      closeModal();
+      onPick(kind);
+    };
+  });
+  (modal.querySelector("#m-cancel") as HTMLButtonElement).onclick = closeModal;
+}
+
+// ---------------------------------------------------------------------------
+// SSH modal
+// ---------------------------------------------------------------------------
 export function openSshModal(onConnect: (p: SshParams) => Promise<void>) {
   const modal = mount(`
     <div class="modal">
       <div class="modal-header">
         <span class="modal-badge">SSH</span>
         <div>
-          <div class="modal-title">Nouvelle connexion</div>
-          <div class="modal-sub">Connectez-vous à un équipement réseau</div>
+          <div class="modal-title">Connexion SSH</div>
+          <div class="modal-sub">Équipement réseau via port 22</div>
         </div>
       </div>
       <div class="modal-sep"></div>
@@ -118,6 +162,9 @@ export function openSshModal(onConnect: (p: SshParams) => Promise<void>) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Serial modal
+// ---------------------------------------------------------------------------
 const BAUD_RATES = [9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600];
 const PARITIES = [
   { label: "None", value: 0 },
@@ -219,4 +266,126 @@ export async function openSerialModal(onConnect: (p: SerialParams) => Promise<vo
 
   ok.onclick = submit;
   (modal.querySelector("#m-cancel") as HTMLButtonElement).onclick = closeModal;
+}
+
+// ---------------------------------------------------------------------------
+// Settings modal — theme + font size, persists to localStorage.
+// ---------------------------------------------------------------------------
+export type ThemeChoice = "system" | "dark" | "light";
+
+export interface Settings {
+  theme: ThemeChoice;
+  fontSize: number;
+}
+
+const SETTINGS_KEY = "netflow.settings.v1";
+const DEFAULT_SETTINGS: Settings = { theme: "system", fontSize: 14 };
+
+export function loadSettings(): Settings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return { ...DEFAULT_SETTINGS };
+    const obj = JSON.parse(raw);
+    return {
+      theme: ["system", "dark", "light"].includes(obj.theme) ? obj.theme : "system",
+      fontSize:
+        typeof obj.fontSize === "number" && obj.fontSize >= 8 && obj.fontSize <= 32
+          ? obj.fontSize
+          : 14,
+    };
+  } catch {
+    return { ...DEFAULT_SETTINGS };
+  }
+}
+
+export function saveSettings(s: Settings) {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+}
+
+function effectiveTheme(choice: ThemeChoice): "dark" | "light" {
+  if (choice === "system") {
+    return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  }
+  return choice;
+}
+
+export function applyTheme(choice: ThemeChoice) {
+  document.documentElement.setAttribute("data-theme", effectiveTheme(choice));
+}
+
+// Re-apply when the OS color scheme changes (relevant only when theme = system).
+window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
+  const s = loadSettings();
+  if (s.theme === "system") applyTheme("system");
+});
+
+export function openSettingsModal(onChange: (s: Settings) => void) {
+  const current = loadSettings();
+
+  const modal = mount(`
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-badge modal-badge-set">SET</span>
+        <div>
+          <div class="modal-title">Paramètres</div>
+          <div class="modal-sub">Apparence et terminal</div>
+        </div>
+      </div>
+      <div class="modal-sep"></div>
+      <div class="field">
+        <label>Thème</label>
+        <div class="seg" id="seg-theme">
+          <button data-v="system">Système</button>
+          <button data-v="dark">Sombre</button>
+          <button data-v="light">Clair</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Taille police terminal</label>
+        <div class="row-num">
+          <button id="fs-minus">−</button>
+          <input id="fs-val" type="text" readonly />
+          <button id="fs-plus">+</button>
+          <span style="color: var(--text-muted); font-size: 11px; margin-left: 8px">px</span>
+        </div>
+      </div>
+      <div class="modal-btns">
+        <button class="btn btn-primary" id="m-close">Fermer</button>
+      </div>
+    </div>
+  `);
+
+  const segButtons = modal.querySelectorAll<HTMLButtonElement>("#seg-theme button");
+  const fsVal = modal.querySelector("#fs-val") as HTMLInputElement;
+
+  function refresh() {
+    segButtons.forEach((b) => b.classList.toggle("on", b.dataset.v === current.theme));
+    fsVal.value = String(current.fontSize);
+  }
+  refresh();
+
+  function commit() {
+    saveSettings(current);
+    applyTheme(current.theme);
+    onChange(current);
+  }
+
+  segButtons.forEach((b) => {
+    b.onclick = () => {
+      current.theme = b.dataset.v as ThemeChoice;
+      refresh();
+      commit();
+    };
+  });
+  (modal.querySelector("#fs-minus") as HTMLButtonElement).onclick = () => {
+    current.fontSize = Math.max(8, current.fontSize - 1);
+    refresh();
+    commit();
+  };
+  (modal.querySelector("#fs-plus") as HTMLButtonElement).onclick = () => {
+    current.fontSize = Math.min(32, current.fontSize + 1);
+    refresh();
+    commit();
+  };
+  (modal.querySelector("#m-close") as HTMLButtonElement).onclick = closeModal;
 }
