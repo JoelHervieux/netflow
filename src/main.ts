@@ -22,7 +22,7 @@ interface Session {
   fit: FitAddon;
   panel: HTMLDivElement;
   connected: boolean;
-  colorize: (bytes: Uint8Array) => string;
+  colorize: (text: string) => string;
 }
 
 const TERM_THEME = {
@@ -113,15 +113,14 @@ function createSession(id: string, type: SessionType, title: string): Session {
 // base64, no global event emit. The colorizer wraps switch CLI keywords with
 // ANSI escapes on complete lines only (partial lines flow through plain so
 // interactive echo stays snappy).
-function makeDataChannel(getId: () => string | null): Channel<ArrayBuffer> {
-  const ch = new Channel<ArrayBuffer>();
-  ch.onmessage = (buf) => {
+function makeDataChannel(getId: () => string | null): Channel<string> {
+  const ch = new Channel<string>();
+  ch.onmessage = (text) => {
     const id = getId();
     if (!id) return;
     const s = sessions.get(id);
     if (!s) return;
-    const bytes = new Uint8Array(buf);
-    s.term.write(s.colorize(bytes));
+    s.term.write(s.colorize(text));
   };
   return ch;
 }

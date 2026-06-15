@@ -6,7 +6,7 @@ use std::sync::Mutex;
 
 use serial::SerialHandle;
 use ssh::SshCmd;
-use tauri::ipc::{Channel, InvokeResponseBody};
+use tauri::ipc::Channel;
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -36,7 +36,7 @@ async fn ssh_connect(
     port: u16,
     username: String,
     password: String,
-    on_data: Channel<InvokeResponseBody>,
+    on_data: Channel<String>,
 ) -> Result<String, String> {
     let id = uuid::Uuid::new_v4().to_string();
     let app_close = app.clone();
@@ -51,7 +51,7 @@ async fn ssh_connect(
         80,
         24,
         move |bytes| {
-            let _ = on_data_cb.send(InvokeResponseBody::Raw(bytes));
+            let _ = on_data_cb.send(String::from_utf8_lossy(&bytes).into_owned());
         },
         move || emit_closed(&app_close, &id_close),
     )
@@ -70,7 +70,7 @@ fn serial_connect(
     data_bits: u32,
     parity: u32,
     stop_bits: u32,
-    on_data: Channel<InvokeResponseBody>,
+    on_data: Channel<String>,
 ) -> Result<String, String> {
     let id = uuid::Uuid::new_v4().to_string();
     let app_close = app.clone();
@@ -84,7 +84,7 @@ fn serial_connect(
         parity,
         stop_bits,
         move |bytes| {
-            let _ = on_data_cb.send(InvokeResponseBody::Raw(bytes));
+            let _ = on_data_cb.send(String::from_utf8_lossy(&bytes).into_owned());
         },
         move || emit_closed(&app_close, &id_close),
     )?;

@@ -93,19 +93,16 @@ function colorizeLine(line: string): string {
   return out;
 }
 
-// Stateful colorizer per session: buffers a possibly-partial trailing line so
-// regexes only ever run on complete lines.
+// Stateful colorizer per session: regexes only ever run on complete lines.
+// Trailing partial line is written through plain so interactive echo stays
+// snappy.
 export function makeColorizer() {
-  const decoder = new TextDecoder("utf-8", { fatal: false });
-
-  return function transform(bytes: Uint8Array): string {
-    const text = decoder.decode(bytes, { stream: true });
+  return function transform(text: string): string {
     let out = "";
     let i = 0;
     while (i < text.length) {
       const nl = text.indexOf("\n", i);
       if (nl === -1) {
-        // Trailing partial line — write through plain for responsive echo.
         out += text.slice(i);
         break;
       }
