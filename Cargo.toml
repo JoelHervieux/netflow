@@ -1,30 +1,29 @@
 [package]
 name = "netflow"
-version = "2.0.0"
-description = "NetFlow — client terminal SSH & Serial"
+version = "3.0.0"
+description = "NetFlow — native SSH & Serial terminal client"
 authors = ["NetFlow"]
 edition = "2021"
 rust-version = "1.77"
 
-[lib]
-name = "netflow_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
-
-[build-dependencies]
-tauri-build = { version = "2", features = [] }
+[[bin]]
+name = "netflow"
+path = "src/main.rs"
 
 [dependencies]
-tauri = { version = "2", features = [] }
-tauri-plugin-clipboard-manager = "2"
+eframe = { version = "0.29", default-features = false, features = ["default_fonts", "glow", "persistence", "wayland", "x11"] }
+egui = "0.29"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-base64 = "0.22"
-uuid = { version = "1", features = ["v4"] }
+vt100 = "0.15"
 russh = "0.45"
 russh-keys = "0.45"
 tokio = { version = "1", features = ["rt-multi-thread", "io-util", "net", "sync", "macros", "time"] }
 async-trait = "0.1"
 serialport = "4.5"
+arboard = "3"
+rfd = "0.15"
+uuid = { version = "1", features = ["v4"] }
 
 [profile.release]
 panic = "abort"

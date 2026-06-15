@@ -5,8 +5,6 @@ use std::time::Duration;
 
 use serialport::{DataBits, Parity, SerialPort, StopBits};
 
-/// A live serial connection: a shared port handle plus a run flag that the
-/// reader thread polls.
 pub struct SerialHandle {
     port: Arc<Mutex<Box<dyn SerialPort>>>,
     running: Arc<AtomicBool>,
@@ -55,8 +53,6 @@ fn stop_bits(n: u32) -> StopBits {
     }
 }
 
-/// Open a serial port and spawn a reader thread. `on_data` receives raw bytes,
-/// `on_close` fires once when the reader stops.
 pub fn connect(
     port_name: &str,
     baud_rate: u32,

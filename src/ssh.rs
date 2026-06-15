@@ -6,8 +6,6 @@ use russh::keys::key::PublicKey;
 use russh::{Channel, ChannelMsg, Disconnect};
 use tokio::sync::mpsc;
 
-/// Accept any host key. A real client would verify against known_hosts; this
-/// mirrors the original C client which also did not pin host keys.
 struct Client;
 
 #[async_trait]
@@ -19,16 +17,12 @@ impl client::Handler for Client {
     }
 }
 
-/// Commands sent from the Tauri command layer to a live SSH session task.
 pub enum SshCmd {
     Data(Vec<u8>),
     Resize { cols: u32, rows: u32 },
     Close,
 }
 
-/// Spawn an interactive shell over SSH. On success returns a sender used to
-/// feed input / resize / close. `on_data` is called with raw output bytes,
-/// `on_close` once when the channel ends.
 pub async fn connect(
     host: String,
     port: u16,
