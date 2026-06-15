@@ -14,27 +14,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
 
-      - run: npm ci
+      - name: Build release binary
+        run: cargo build --release
 
-      - name: Build Tauri bundle
-        run: npm run tauri build
-
-      - name: Rename installer to stable name
+      - name: Stage installer asset
         shell: pwsh
         run: |
-          $src = Get-ChildItem src-tauri/target/release/bundle/nsis/*.exe | Select-Object -First 1
-          Copy-Item $src.FullName -Destination src-tauri/target/release/bundle/nsis/NetFlow-Setup.exe -Force
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item target/release/netflow.exe -Destination dist/NetFlow.exe -Force
 
       - name: Publish rolling "latest" release
         uses: softprops/action-gh-release@v2
@@ -43,6 +34,6 @@ jobs:
           name: NetFlow (latest)
           body: |
             Build automatique depuis `main` au commit ${{ github.sha }}.
-            Téléchargez **NetFlow-Setup.exe** ci-dessous.
-          files: src-tauri/target/release/bundle/nsis/NetFlow-Setup.exe
+            Téléchargez **NetFlow.exe** ci-dessous.
+          files: dist/NetFlow.exe
           make_latest: "true"
